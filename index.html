@@ -1,4 +1,26 @@
-<!DOCTYPE html>
+let rawData = [];
+
+async function loadData() {
+  try {
+    const res = await fetch("PEGA_AQUI_TU_URL_APPS_SCRIPT");
+    rawData = await res.json();
+
+    console.log("DATA LOADED:", rawData.length);
+
+    // 🔥 inicializar todo DESPUÉS de cargar datos
+    initRaw?.();
+    initSpecies?.();
+    initPerf?.();
+
+    // opcional: auto abrir tabla
+    switchTab(0);
+
+  } catch (e) {
+    console.error("ERROR FETCH:", e);
+  }
+}
+
+loadData();<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
