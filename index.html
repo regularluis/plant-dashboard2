@@ -36,34 +36,35 @@ canvas { max-width: 100%; }
 </div>
 
 <script>
+<script>
 let rawData = [];
-
-/* 🔥 IMPORTANTE: SOLO AQUÍ pones tu Apps Script URL */
 const DATA_URL = "PEGA_AQUI_TU_URL_APPS_SCRIPT";
 
 async function loadData() {
   try {
     const res = await fetch(DATA_URL);
-    rawData = await res.json();
+
+    const text = await res.text();
+    console.log("RAW RESPONSE:", text);
+
+    rawData = JSON.parse(text);
 
     document.getElementById("status").innerText =
-      "Loaded: " + rawData.length + " records";
+      `Loaded: ${rawData.length} records`;
 
     renderChart();
 
   } catch (e) {
-    console.error(e);
+    console.error("FETCH ERROR:", e);
     document.getElementById("status").innerText =
-      "Error loading data (check URL)";
+      "Error loading data (check console + URL)";
   }
 }
 
 function renderChart() {
   const ctx = document.getElementById("chart");
 
-  const grouped = {
-    C: 0, TT: 0, MIX: 0, IELF: 0
-  };
+  const grouped = { C: 0, TT: 0, MIX: 0, IELF: 0 };
 
   rawData.forEach(d => {
     if (grouped[d.t] !== undefined) grouped[d.t]++;
@@ -82,6 +83,7 @@ function renderChart() {
 }
 
 loadData();
+</script>
 </script>
 
 </body>
