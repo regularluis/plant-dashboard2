@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Plant Dashboard</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
@@ -16,13 +16,19 @@ body {
 }
 
 .wrap {
-  max-width: 1000px;
+  max-width: 900px;
   margin: auto;
   background: white;
   padding: 20px;
   border-radius: 10px;
 }
+
 canvas { max-width: 100%; }
+
+#status {
+  margin-bottom: 10px;
+  font-weight: bold;
+}
 </style>
 </head>
 
@@ -31,13 +37,13 @@ canvas { max-width: 100%; }
 <div class="wrap">
   <h1>Plant Dashboard</h1>
   <p id="status">Loading data...</p>
-
   <canvas id="chart"></canvas>
 </div>
 
 <script>
-<script>
 let rawData = [];
+
+/* 🔥 REEMPLAZA ESTO */
 const DATA_URL = "PEGA_AQUI_TU_URL_APPS_SCRIPT";
 
 async function loadData() {
@@ -49,13 +55,17 @@ async function loadData() {
 
     rawData = JSON.parse(text);
 
+    if (!Array.isArray(rawData)) {
+      throw new Error("Data is not an array");
+    }
+
     document.getElementById("status").innerText =
       `Loaded: ${rawData.length} records`;
 
     renderChart();
 
   } catch (e) {
-    console.error("FETCH ERROR:", e);
+    console.error("LOAD ERROR:", e);
     document.getElementById("status").innerText =
       "Error loading data (check console + URL)";
   }
@@ -67,8 +77,15 @@ function renderChart() {
   const grouped = { C: 0, TT: 0, MIX: 0, IELF: 0 };
 
   rawData.forEach(d => {
-    if (grouped[d.t] !== undefined) grouped[d.t]++;
+    // 🔥 robusto contra schemas diferentes
+    const t = d.t || d.Treatment || d.treatment;
+
+    if (grouped[t] !== undefined) {
+      grouped[t]++;
+    }
   });
+
+  console.log("GROUPED:", grouped);
 
   new Chart(ctx, {
     type: "bar",
@@ -76,14 +93,20 @@ function renderChart() {
       labels: Object.keys(grouped),
       datasets: [{
         label: "Pots",
-        data: Object.values(grouped)
+        data: Object.values(grouped),
+        backgroundColor: ["#3a7d44","#4a6fa5","#d4a03c","#c44536"]
       }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false }
+      }
     }
   });
 }
 
 loadData();
-</script>
 </script>
 
 </body>
