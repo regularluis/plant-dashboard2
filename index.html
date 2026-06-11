@@ -1,177 +1,87 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Plant Germination & Survival Analysis</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Plant Dashboard</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 
 <style>
-/* ====== TU CSS SIN CAMBIOS ====== */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
-
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
 body {
-  font-family: 'Inter', -apple-system, sans-serif;
-  color: #1a2332;
-  background: #f8f9fb;
-  padding: 24px;
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 20px;
+  background: #f5f6fa;
 }
 
-/* (PEGA AQUÍ TODO TU CSS TAL CUAL — NO LO TOCO PARA NO ROMPER DISEÑO) */
+.wrap {
+  max-width: 1000px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+}
+canvas { max-width: 100%; }
 </style>
 </head>
 
 <body>
 
 <div class="wrap">
-  <h1>Plant Germination & Survival Analysis</h1>
+  <h1>Plant Dashboard</h1>
+  <p id="status">Loading data...</p>
 
-  <!-- ===== TU HTML COMPLETO SIN CAMBIOS ===== -->
-  <!-- (NO LO REPITO ENTERO PARA NO HACERTE SCROLL INNECESARIO) -->
-
+  <canvas id="chart"></canvas>
 </div>
 
 <script>
-/* =======================
-   1. GLOBAL STATE
-======================= */
 let rawData = [];
 
-/* =======================
-   2. LOAD DATA (CORREGIDO)
-======================= */
+/* 🔥 IMPORTANTE: SOLO AQUÍ pones tu Apps Script URL */
+const DATA_URL = "PEGA_AQUI_TU_URL_APPS_SCRIPT";
+
 async function loadData() {
   try {
-    const res = await fetch("PEGA_AQUI_TU_URL_APPS_SCRIPT");
-
-    if (!res.ok) throw new Error("HTTP error " + res.status);
-
+    const res = await fetch(DATA_URL);
     rawData = await res.json();
 
-    console.log("DATA LOADED:", rawData.length);
+    document.getElementById("status").innerText =
+      "Loaded: " + rawData.length + " records";
 
-    // inicialización segura
-    initRaw?.();
-    initSpecies?.();
-    initPerf?.();
-    switchTab(0);
+    renderChart();
 
   } catch (e) {
-    console.error("ERROR FETCH:", e);
+    console.error(e);
+    document.getElementById("status").innerText =
+      "Error loading data (check URL)";
   }
 }
 
-/* =======================
-   3. INIT ONCE DOM IS READY
-======================= */
-document.addEventListener("DOMContentLoaded", () => {
-  loadData();
-});
+function renderChart() {
+  const ctx = document.getElementById("chart");
 
-/* =======================
-   4. TABS
-======================= */
-function switchTab(i) {
-  document.querySelectorAll('.tab')
-    .forEach((t, idx) => t.classList.toggle('active', idx === i));
+  const grouped = {
+    C: 0, TT: 0, MIX: 0, IELF: 0
+  };
 
-  document.querySelectorAll('.panel')
-    .forEach((p, idx) => p.classList.toggle('active', idx === i));
+  rawData.forEach(d => {
+    if (grouped[d.t] !== undefined) grouped[d.t]++;
+  });
 
-  if (i === 1 && !window._survInit) initSurv();
-  if (i === 2 && !window._perfInit) initPerf();
-  if (i === 3 && !window._specInit) initSpecies();
-  if (i === 4 && !window._rawInit) initRaw();
-}
-
-/* =======================
-   5. CHART PLACEHOLDER (EJEMPLO LIMPIO)
-======================= */
-function initSurv() {
-  window._survInit = true;
-
-  new Chart(document.getElementById('chart-surv'), {
-    type: 'bar',
+  new Chart(ctx, {
+    type: "bar",
     data: {
-      labels: ['Control','TT','MIX','IELF'],
-      datasets: [
-        { label: 'Survived', data: [27,7,2,0], backgroundColor: '#3a7d44' },
-        { label: 'Died', data: [0,9,4,2], backgroundColor: '#c44536' }
-      ]
-    },
-    options: {
-      responsive: true,
-      scales: { x: { stacked: true }, y: { stacked: true } }
+      labels: Object.keys(grouped),
+      datasets: [{
+        label: "Pots",
+        data: Object.values(grouped)
+      }]
     }
   });
 }
 
-/* =======================
-   6. PERFORMANCE (SIN CAMBIOS LOGICOS)
-======================= */
-let perfChart = null;
-let scatterChart = null;
-let currentPerf = 'length';
-
-function initPerf() {
-  window._perfInit = true;
-  renderPerf();
-}
-
-function renderPerf() {
-  // TU LOGICA TAL CUAL (NO LA TOCO AQUÍ PARA NO ROMPER ESTADÍSTICA)
-}
-
-/* =======================
-   7. SPECIES
-======================= */
-function initSpecies() {
-  window._specInit = true;
-
-  const tbody = document.getElementById('heatmap-body');
-  tbody.innerHTML = ""; // IMPORTANTE: evita duplicados si recargas
-
-  // tu lógica aquí...
-}
-
-/* =======================
-   8. RAW TABLE
-======================= */
-function initRaw() {
-  window._rawInit = true;
-  renderRaw();
-}
-
-function renderRaw() {
-  if (!rawData.length) return;
-
-  const tbody = document.querySelector('#raw-table tbody');
-  tbody.innerHTML = rawData.map(d => `
-    <tr>
-      <td>${d.id}</td>
-      <td>${d.t}</td>
-      <td>${d.sp}</td>
-      <td>${d.cnt}</td>
-      <td>${(d.gr*100).toFixed(1)}%</td>
-      <td>${d.len ?? '—'}</td>
-      <td>${d.fw ?? '—'}</td>
-      <td>${d.dw ?? '—'}</td>
-      <td>${d.st}</td>
-    </tr>
-  `).join('');
-}
-
-/* =======================
-   9. SORT (BÁSICO)
-======================= */
-window.sortRaw = function(key) {
-  rawData.sort((a,b) => (a[key] > b[key] ? 1 : -1));
-  renderRaw();
-};
-
+loadData();
 </script>
 
 </body>
