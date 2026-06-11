@@ -7,12 +7,10 @@ async function loadData() {
 
     console.log("DATA LOADED:", rawData.length);
 
-    // 🔥 inicializar todo DESPUÉS de cargar datos
     initRaw?.();
     initSpecies?.();
     initPerf?.();
 
-    // opcional: auto abrir tabla
     switchTab(0);
 
   } catch (e) {
@@ -20,7 +18,40 @@ async function loadData() {
   }
 }
 
-loadData();<!DOCTYPE html>
+loadData();
+async function loadData() {
+  try {
+    const res = await fetch("https://script.googleusercontent.com/macros/echo?user_content_key=AUkAhnRVnR6pC3Kn-yCZ0OVhgjx5Xuc0sohfjsKcatZd4x0lGR053UqrMxiU7JVycy5ZIcETQgz5_XDVrn8mv3-qSZkVRaNWeElld17kjDaUTcA6dzx4G6OYVvvEg9nsQDKBh516yjzlHCcuKwNNXMRjhVGFF36Suyco35E_gH5x7mL-zg-xyxG-Jx-u9bp3IAe7ac2nH-ozd4em_tVKGmLiJZxRpNstLhAtDWH6acPXsr56Qh30RVltod7TYRHUQZH6GQF4mGpjdljvmTAbk4BqZmQq_jZoXw&lib=MVKR8AHU4KgctM29b8810_uM4e3ywuRvV");
+
+    const json = await res.json();
+
+    // 🔥 ESTO ES CRÍTICO: tu dashboard espera campos específicos
+    rawData = json.map(r => ({
+      id: r.ID,
+      t: r.SOIL,
+      sp: r.SPECIES,
+      cnt: r.COUNT,
+      gr: r.GERMINATION,
+      len: r["Measuments of plants length in cm"],
+      fw: r["Fresh Weight (gr)"],
+      dw: r["Dry weight (gr)"],
+      st: (r["Measuments of plants length in cm"] == null) ? "died" : "alive"
+    }));
+
+    console.log("DATA LOADED:", rawData.length);
+
+    initRaw();
+    initSpecies();
+    initPerf();
+
+    switchTab(0);
+
+  } catch (e) {
+    console.error("FETCH ERROR:", e);
+  }
+}
+
+loadData();
 <html lang="en">
 <head>
 <meta charset="UTF-8">
