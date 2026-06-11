@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Germination & Survival Analysis</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, sans-serif; color: #1a2332; background: #f8f9fb; padding: 24px; }
+  .wrap { max-width: 960px; margin: 0 auto; background: #fff; border-radius: 12px; padding: 28px 32px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  h1 { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; margin-bottom: 2px; }
+  h1 + p { font-size: 13px; color: #5a6b7f; margin-bottom: 16px; }
+  .summary { display: grid; grid-template-columns: repeat(4,1fr); border: 1px solid #e2e6ec; border-radius: 8px; margin-bottom: 22px; }
+  .stat { text-align: center; padding: 14px 12px; }
+  .stat:not(:last-child) { border-right: 1px solid #e2e6ec; }
+  .stat-val { font-size: 28px; font-weight: 700; font-family: 'JetBrains Mono', monospace; }
+  .stat-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em; color: #5a6b7f; margin-top: 2px; }
+  .stat-sub { font-size: 11px; color: #8a96a6; }
+  .tabs { display: flex; gap: 0; border-bottom: 1px solid #e2e6ec; margin-bottom: 22px; overflow-x: auto; }
+  .tab { padding: 9px 18px; font-size: 13px; font-weight: 400; color: #7a8696; background: none; border: none; border-bottom: 2px solid transparent; cursor: pointer; white-space: nowrap; transition: all .15s; }
+  .tab.active { font-weight: 700; color: #1a2332; border-bottom-color: #1a2332; }
+  .tab:hover { color: #1a2332; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .test-card { padding: 14px 18px; border: 1px solid #e2e6ec; border-radius: 8px; background: #fafbfc; margin-bottom: 14px; }
+  .test-title { font-weight: 600; font-size: 13px; color: #2a3545; margin-bottom: 6px; }
+  .test-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .test-stat { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: #4a5565; }
+  .test-note { font-size: 11px; color: #8a96a6; margin-top: 4px; }
+  .sig { font-family: 'JetBrains Mono', monospace; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 4px; }
+  .sig-yes { color: #b33; background: #b3331a; }
+  .sig-no { color: #888; background: #88888818; }
+  .chart-wrap { position: relative; max-width: 100%; margin: 16px 0; }
+  h3 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; }
+  .note { font-size: 12px; color: #6a7a8e; margin-bottom: 12px; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { text-align: left; padding: 7px 10px; font-weight: 600; color: #4a5565; border-bottom: 2px solid #1a2332; position: sticky; top: 0; background: #fff; z-index: 1; cursor: pointer; user-select: none; }
+  tbody td { padding: 6px 10px; border-bottom: 1px solid #f0f1f3; }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .badge { font-size: 10px; font-weight: 600; padding: 2px 6px; border-radius: 3px; display: inline-block; }
+  .badge-alive { background: #3a7d4418; color: #3a7d44; }
+  .badge-died { background: #c4453618; color: #c44536; }
+  .badge-nodata { background: #88888818; color: #888; }
+  .pill-row { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+  .pill { padding: 5px 14px; font-size: 11px; font-weight: 400; background: #f0f1f3; color: #4a5565; border: none; border-radius: 4px; cursor: pointer; }
+  .pill.active { font-weight: 700; color: #fff; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; margin-top: 20px; }
+  .surv-card { padding: 14px; border-radius: 8px; }
+  .surv-card-title { font-weight: 700; font-size: 14px; }
+  .surv-card-val { font-size: 24px; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin: 4px 0; }
+  .surv-card-sub { font-size: 11px; color: #6a7a8e; }
+  .pair-table { overflow-x: auto; }
+  .heatmap { overflow-x: auto; margin-bottom: 20px; }
+  .heatmap td, .heatmap th { padding: 8px 12px; }
+  .heatmap th { font-weight: 600; border-bottom: 2px solid #1a2332; }
+  .heatmap td.heat { text-align: center; font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .heatmap td.row-label { font-weight: 600; }
+  .scroll-table { overflow-x: auto; max-height: 420px; overflow-y: auto; }
+  .footer { border-top: 1px solid #e2e6ec; margin-top: 30px; padding-top: 12px; font-size: 11px; color: #8a96a6; line-height: 1.6; }
+  @media (max-width: 640px) {
+    .summary { grid-template-columns: repeat(2,1fr); }
+    .grid-4 { grid-template-columns: repeat(2,1fr); }
+    .wrap { padding: 16px; }
+    .stat:nth-child(2) { border-right: none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Plant Germination & Survival Analysis</h1>
+  <p>115 pots · 4 treatments (C, TT, MIX, IELF) · 5 species (Fall Rye, Hemp 1–4) · 8 seeds/pot</p>
+
+  <div class="summary">
+    <div class="stat"><div class="stat-val">115</div><div class="stat-label">Total Pots</div></div>
+    <div class="stat"><div class="stat-val">51</div><div class="stat-label">Germinated</div><div class="stat-sub">44.3% of pots</div></div>
+    <div class="stat"><div class="stat-val">36</div><div class="stat-label">Survived</div><div class="stat-sub">70.6% of germinated</div></div>
+    <div class="stat"><div class="stat-val">11.6%</div><div class="stat-label">Seed Germ. Rate</div><div class="stat-sub">107 / 920 seeds</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(0)">Germination</button>
+    <button class="tab" onclick="switchTab(1)">Survivability</button>
+    <button class="tab" onclick="switchTab(2)">Performance</button>
+    <button class="tab" onclick="switchTab(3)">Species Breakdown</button>
+    <button class="tab" onclick="switchTab(4)">Raw Data</button>
+  </div>
+
+  <!-- Tab 0: Germination -->
+  <div class="panel active" id="panel-0">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:18px;">
+      <div class="test-card">
+        <div class="test-title">Chi-square: Treatment vs Germination (yes/no)</div>
+        <div class="test-row"><span class="test-stat">χ²(3) = 47.768</span><span class="sig sig-yes">p &lt; 0.001 ***</span></div>
+        <div class="test-note">Germination success strongly depends on treatment</div>
+      </div>
+      <div class="test-card">
+        <div class="test-title">Kruskal-Wallis: Germination Rate by Treatment</div>
+        <div class="test-row"><span class="test-stat">H = 56.081</span><span class="sig sig-yes">p &lt; 0.001 ***</span></div>
+        <div class="test-note">Germination rates significantly differ across treatments</div>
+      </div>
+    </div>
+    <h3>Pots with at least 1 seed germinated (%)</h3>
+    <div class="chart-wrap"><canvas id="chart-germ" height="280"></canvas></div>
+    <h3>Pairwise Comparisons (Mann-Whitney U, Bonferroni corrected)</h3>
+    <div class="pair-table">
+      <table>
+        <thead><tr><th>Comparison</th><th>U</th><th>p (raw)</th><th>p (Bonferroni)</th><th></th></tr></thead>
+        <tbody>
+          <tr><td style="font-weight:500">C vs IELF</td><td class="mono">845.0</td><td class="mono">0.0000</td><td class="mono">0.0000</td><td><span class="sig sig-yes">p &lt; 0.001 ***</span></td></tr>
+          <tr><td style="font-weight:500">C vs MIX</td><td class="mono">669.0</td><td class="mono">0.0000</td><td class="mono">0.0000</td><td><span class="sig sig-yes">p &lt; 0.001 ***</span></td></tr>
+          <tr><td style="font-weight:500">C vs TT</td><td class="mono">722.5</td><td class="mono">0.0000</td><td class="mono">0.0002</td><td><span class="sig sig-yes">p &lt; 0.001 ***</span></td></tr>
+          <tr><td style="font-weight:500">IELF vs MIX</td><td class="mono">309.0</td><td class="mono">0.0702</td><td class="mono">0.4215</td><td><span class="sig sig-no">p = 0.4215 ns</span></td></tr>
+          <tr><td style="font-weight:500">IELF vs TT</td><td class="mono">235.0</td><td class="mono">0.0001</td><td class="mono">0.0005</td><td><span class="sig sig-yes">p &lt; 0.001 ***</span></td></tr>
+          <tr><td style="font-weight:500">MIX vs TT</td><td class="mono">259.0</td><td class="mono">0.0251</td><td class="mono">0.1504</td><td><span class="sig sig-no">p = 0.1504 ns</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Tab 1: Survivability -->
+  <div class="panel" id="panel-1">
+    <div class="test-card">
+      <div class="test-title">Chi-square: Treatment vs Survival (among germinated pots)</div>
+      <div class="test-row"><span class="test-stat">χ²(3) = 25.612</span><span class="sig sig-yes">p &lt; 0.001 ***</span></div>
+      <div class="test-note">Survival after germination depends strongly on treatment. "Not Present" in measurements = died.</div>
+    </div>
+    <h3>Survival Funnel by Treatment</h3>
+    <p class="note">Of the pots that germinated, how many plants survived to harvest?</p>
+    <div class="chart-wrap"><canvas id="chart-surv" height="280"></canvas></div>
+    <div class="grid-4">
+      <div class="surv-card" style="border:2px solid #3a7d4422;background:#3a7d4408"><div class="surv-card-title" style="color:#3a7d44">Control</div><div class="surv-card-val">100%</div><div class="surv-card-sub">27/27 survived</div></div>
+      <div class="surv-card" style="border:2px solid #4a6fa522;background:#4a6fa508"><div class="surv-card-title" style="color:#4a6fa5">TT</div><div class="surv-card-val">43.8%</div><div class="surv-card-sub">7/16 survived</div></div>
+      <div class="surv-card" style="border:2px solid #d4a03c22;background:#d4a03c08"><div class="surv-card-title" style="color:#d4a03c">MIX</div><div class="surv-card-val">33.3%</div><div class="surv-card-sub">2/6 survived</div></div>
+      <div class="surv-card" style="border:2px solid #c4453622;background:#c4453608"><div class="surv-card-title" style="color:#c44536">IELF</div><div class="surv-card-val">0%</div><div class="surv-card-sub">0/2 survived</div></div>
+    </div>
+  </div>
+
+  <!-- Tab 2: Performance -->
+  <div class="panel" id="panel-2">
+    <div class="pill-row">
+      <button class="pill active" style="background:#1a2332" onclick="switchPerf('length')">Plant Length</button>
+      <button class="pill" onclick="switchPerf('fw')">Fresh Weight</button>
+      <button class="pill" onclick="switchPerf('dw')">Dry Weight</button>
+    </div>
+    <div id="perf-test"></div>
+    <h3 id="perf-title">Plant Length (cm) — Mean ± SD</h3>
+    <div class="chart-wrap"><canvas id="chart-perf" height="280"></canvas></div>
+    <h3>Individual Pot Data — Germination Rate vs Performance</h3>
+    <div class="chart-wrap"><canvas id="chart-scatter" height="260"></canvas></div>
+  </div>
+
+  <!-- Tab 3: Species Breakdown -->
+  <div class="panel" id="panel-3">
+    <h3>Germination by Treatment × Species (% of pots germinated)</h3>
+    <div class="heatmap">
+      <table>
+        <thead><tr><th></th><th>Fall Rye</th><th>Hemp 1</th><th>Hemp 2</th><th>Hemp 3</th><th>Hemp 4</th></tr></thead>
+        <tbody id="heatmap-body"></tbody>
+      </table>
+    </div>
+    <h3>Mean Germination Rate by Species within Treatment</h3>
+    <div class="chart-wrap"><canvas id="chart-species" height="300"></canvas></div>
+  </div>
+
+  <!-- Tab 4: Raw Data -->
+  <div class="panel" id="panel-4">
+    <p class="note">Click column headers to sort. Use treatment filters to narrow down.</p>
+    <div class="pill-row" id="raw-filters"></div>
+    <div class="scroll-table"><table id="raw-table"><thead><tr></tr></thead><tbody></tbody></table></div>
+    <div id="raw-count" style="font-size:11px;color:#8a96a6;margin-top:6px"></div>
+  </div>
+
+  <div class="footer">
+    <strong>Methods:</strong> Chi-square tests for categorical outcomes (germination yes/no, survival yes/no).
+    Kruskal-Wallis H tests for continuous metrics (non-parametric, suitable for unequal group sizes and non-normal distributions).
+    Pairwise Mann-Whitney U tests with Bonferroni correction (6 comparisons, α = 0.05/6 ≈ 0.0083).
+    "Not Present" in measurements treated as plant death.
+  </div>
+</div>
+
+<script>
+const COLORS = { C:'#3a7d44', IELF:'#c44536', MIX:'#d4a03c', TT:'#4a6fa5' };
+const LABELS = { C:'Control', IELF:'IELF', MIX:'MIX', TT:'TT' };
+const SP_COLORS = { FR:'#6b8f4a', H1:'#d4783c', H2:'#5b8ec4', H3:'#9b6bb0', H4:'#c4555a' };
+
+// Raw data
+let rawData = [];
+
+async function loadData() {
+  const res = await fetch("https://script.googleusercontent.com/macros/echo?user_content_key=...");
+  rawData = await res.json();
+
+  initRaw?.();
+  initSpecies?.();
+  renderPerf?.();
+};
+
+// ── Tab switching ──
+function switchTab(i) {
+  document.querySelectorAll('.tab').forEach((t,idx) => t.classList.toggle('active', idx===i));
+  document.querySelectorAll('.panel').forEach((p,idx) => p.classList.toggle('active', idx===i));
+  if (i===1 && !window._survInit) initSurv();
+  if (i===2 && !window._perfInit) initPerf();
+  if (i===3 && !window._specInit) initSpecies();
+  if (i===4 && !window._rawInit) initRaw();
+}
+
+// ── Tab 0: Germination chart ──
+const germCtx = document.getElementById('chart-germ');
+new Chart(germCtx, {
+  type: 'bar',
+  data: {
+    labels: ['Control','TT','MIX','IELF'],
+    datasets: [{
+      label: '% pots germinated',
+      data: [90, 53.3, 24, 6.7],
+      backgroundColor: [COLORS.C, COLORS.TT, COLORS.MIX, COLORS.IELF],
+      borderRadius: 4, barThickness: 56
+    }]
+  },
+  options: {
+    responsive: true, plugins: { legend: { display: false },
+      tooltip: { callbacks: { afterBody: (ctx) => {
+        const info = [{n:30,g:27,sr:30.4},{n:30,g:16,sr:10.0},{n:25,g:6,sr:4.0},{n:30,g:2,sr:0.8}];
+        const d = info[ctx[0].dataIndex];
+        return `${d.g}/${d.n} pots · Seed rate: ${d.sr}%`;
+      }}}
+    },
+    scales: { y: { beginAtZero: true, max: 100, title: { display: true, text: '% of pots' } } }
+  }
+});
+
+// ── Tab 1: Survival ──
+function initSurv() {
+  window._survInit = true;
+  new Chart(document.getElementById('chart-surv'), {
+    type: 'bar',
+    data: {
+      labels: ['Control','TT','MIX','IELF'],
+      datasets: [
+        { label: 'Survived', data: [27,7,2,0], backgroundColor: '#3a7d44', borderRadius: 0, barThickness: 48 },
+        { label: 'Died after germination', data: [0,9,4,2], backgroundColor: '#c44536', borderRadius: {topLeft:4,topRight:4}, barThickness: 48 }
+      ]
+    },
+    options: {
+      responsive: true, plugins: { legend: { position: 'top' } },
+      scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, title: { display: true, text: '# of pots' } } }
+    }
+  });
+}
+
+// ── Tab 2: Performance ──
+let perfChart = null, scatterChart = null, currentPerf = 'length';
+const perfMeta = {
+  length: { label: 'Plant Length (cm)', data: [{t:'C',n:26,m:24.79,s:9.73,md:22.75},{t:'TT',n:7,m:8.76,s:4.57,md:6},{t:'MIX',n:2,m:7.5,s:3.54,md:7.5}], test: 'H = 13.909', p: 'p = 0.0010 **' },
+  fw: { label: 'Fresh Weight (g)', data: [{t:'C',n:26,m:3.36,s:1.88,md:3.08},{t:'TT',n:8,m:.48,s:.52,md:.24},{t:'MIX',n:2,m:.22,s:.01,md:.22}], test: 'H = 17.521', p: 'p = 0.0002 ***' },
+  dw: { label: 'Dry Weight (g)', data: [{t:'C',n:26,m:.9,s:.54,md:.82},{t:'TT',n:8,m:.16,s:.16,md:.09},{t:'MIX',n:2,m:.05,s:.03,md:.05}], test: 'H = 16.117', p: 'p = 0.0003 ***' }
+};
+
+function initPerf() { window._perfInit = true; renderPerf(); }
+function switchPerf(metric) {
+  currentPerf = metric;
+  document.querySelectorAll('#panel-2 .pill').forEach(p => { p.classList.remove('active'); p.style.background='#f0f1f3'; p.style.color='#4a5565'; });
+  const pills = document.querySelectorAll('#panel-2 .pill');
+  const idx = metric==='length'?0:metric==='fw'?1:2;
+  pills[idx].classList.add('active'); pills[idx].style.background='#1a2332'; pills[idx].style.color='#fff';
+  renderPerf();
+}
+
+function renderPerf() {
+  const m = perfMeta[currentPerf];
+  document.getElementById('perf-title').textContent = m.label + ' — Mean ± SD';
+  document.getElementById('perf-test').innerHTML = `<div class="test-card"><div class="test-title">Kruskal-Wallis: ${m.label} by Treatment</div><div class="test-row"><span class="test-stat">${m.test}</span><span class="sig sig-yes">${m.p}</span></div><div class="test-note">Only alive plants with measured values. IELF excluded (0 surviving plants with measurements).</div></div>`;
+  
+  if (perfChart) perfChart.destroy();
+  perfChart = new Chart(document.getElementById('chart-perf'), {
+    type: 'bar',
+    data: {
+      labels: m.data.map(d => LABELS[d.t]),
+      datasets: [{
+        label: m.label,
+        data: m.data.map(d => d.m),
+        backgroundColor: m.data.map(d => COLORS[d.t]),
+        borderRadius: 4, barThickness: 56,
+        error: m.data.map(d => d.s)
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { afterBody: (ctx) => { const d = m.data[ctx[0].dataIndex]; return `n=${d.n} · Median: ${d.md} · SD: ${d.s}`; } } }
+      },
+      scales: { y: { beginAtZero: true, title: { display: true, text: m.label } } }
+    }
+  });
+
+  // Scatter
+  const key = currentPerf==='length'?'len':currentPerf==='fw'?'fw':'dw';
+  const scatterSets = ['C','TT','MIX'].map(t => ({
+    label: LABELS[t],
+    data: rawData.filter(d => d.t===t && d[key]!=null).map(d => ({x: d.gr, y: d[key], id: d.id, sp: d.sp})),
+    backgroundColor: COLORS[t] + 'bb',
+    pointRadius: 6, pointHoverRadius: 8
+  }));
+
+  if (scatterChart) scatterChart.destroy();
+  scatterChart = new Chart(document.getElementById('chart-scatter'), {
+    type: 'scatter',
+    data: { datasets: scatterSets },
+    options: {
+      responsive: true,
+      plugins: {
+        tooltip: { callbacks: {
+          label: (ctx) => { const p = ctx.raw; return `${p.id} (${p.sp}) — Rate: ${(p.x*100).toFixed(1)}%, ${m.label}: ${p.y}`; }
+        }}
+      },
+      scales: {
+        x: { title: { display: true, text: 'Germination Rate' }, beginAtZero: true },
+        y: { title: { display: true, text: m.label }, beginAtZero: true }
+      }
+    }
+  });
+}
+
+// ── Tab 3: Species ──
+function initSpecies() {
+  window._specInit = true;
+  // Heatmap
+  const heatData = [
+    {soil:'C',FR:83.3,H1:100,H2:100,H3:100,H4:66.7},
+    {soil:'TT',FR:33.3,H1:50,H2:33.3,H3:100,H4:50},
+    {soil:'MIX',FR:20,H1:20,H2:20,H3:40,H4:20},
+    {soil:'IELF',FR:0,H1:16.7,H2:0,H3:16.7,H4:0}
+  ];
+  const tbody = document.getElementById('heatmap-body');
+  heatData.forEach(r => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="row-label" style="color:${COLORS[r.soil]}">${LABELS[r.soil]}</td>` +
+      ['FR','H1','H2','H3','H4'].map(sp => {
+        const v = r[sp]; const op = (v/100 * .35).toFixed(2);
+        return `<td class="heat" style="background:rgba(58,125,68,${op});color:${v===0?'#aaa':'#1a2332'}">${v}%</td>`;
+      }).join('');
+    tbody.appendChild(tr);
+  });
+
+  // Species bar chart
+  const speciesRates = {
+    C:{FR:41.7,H1:41.7,H2:22.9,H3:33.3,H4:12.5},
+    TT:{FR:10.4,H1:8.3,H2:8.3,H3:16.7,H4:6.2},
+    MIX:{FR:2.5,H1:7.5,H2:2.5,H3:5.0,H4:2.5},
+    IELF:{FR:0,H1:2.1,H2:0,H3:2.1,H4:0}
+  };
+  new Chart(document.getElementById('chart-species'), {
+    type: 'bar',
+    data: {
+      labels: ['Control','TT','MIX','IELF'],
+      datasets: ['FR','H1','H2','H3','H4'].map(sp => ({
+        label: sp==='FR'?'Fall Rye':`Hemp ${sp.slice(1)}`,
+        data: ['C','TT','MIX','IELF'].map(t => speciesRates[t][sp]),
+        backgroundColor: SP_COLORS[sp], borderRadius: 2
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'top' } },
+      scales: { y: { beginAtZero: true, title: { display: true, text: 'Mean Germination Rate (%)' } } }
+    }
+  });
+}
+
+// ── Tab 4: Raw data table ──
+let rawSort = 'id', rawDir = 1, rawFilter = 'all';
+function initRaw() {
+  window._rawInit = true;
+  const filterDiv = document.getElementById('raw-filters');
+  ['all','C','TT','MIX','IELF'].forEach(f => {
+    const btn = document.createElement('button');
+    btn.className = 'pill' + (f==='all'?' active':'');
+    if (f==='all') { btn.style.background='#1a2332'; btn.style.color='#fff'; }
+    btn.textContent = f==='all'?'All':f;
+    btn.onclick = () => { rawFilter = f; renderRaw(); };
+    filterDiv.appendChild(btn);
+  });
+  renderRaw();
+}
+
+function renderRaw() {
+  // Update filter pills
+  document.querySelectorAll('#raw-filters .pill').forEach(p => {
+    const v = p.textContent === 'All' ? 'all' : p.textContent;
+    p.classList.toggle('active', v===rawFilter);
+    p.style.background = v===rawFilter ? (v==='all'?'#1a2332':COLORS[v]||'#1a2332') : '#f0f1f3';
+    p.style.color = v===rawFilter ? '#fff' : '#4a5565';
+  });
+
+  const cols = [{k:'id',l:'ID'},{k:'t',l:'Treatment'},{k:'sp',l:'Species'},{k:'cnt',l:'Count'},{k:'gr',l:'Germ %'},{k:'len',l:'Length (cm)'},{k:'fw',l:'Fresh Wt (g)'},{k:'dw',l:'Dry Wt (g)'},{k:'st',l:'Status'}];
+  
+  let filtered = rawFilter==='all' ? rawData : rawData.filter(d => d.t===rawFilter);
+  filtered = [...filtered].sort((a,b) => {
+    const av=a[rawSort], bv=b[rawSort];
+    if(av==null&&bv==null)return 0; if(av==null)return 1; if(bv==null)return -1;
+    return (av<bv?-1:av>bv?1:0)*rawDir;
+  });
+
+  const table = document.getElementById('raw-table');
+  const thead = table.querySelector('thead tr');
+  thead.innerHTML = cols.map(c => `<th onclick="sortRaw('${c.k}')">${c.l}${rawSort===c.k?(rawDir===1?' ▲':' ▼'):''}</th>`).join('');
+
+  const tbody = table.querySelector('tbody');
+  tbody.innerHTML = filtered.map(d => {
+    const bc = d.st==='alive'?'badge-alive':d.st==='died'?'badge-died':'badge-nodata';
+    const sl = d.st==='alive'?'ALIVE':d.st==='died'?'DIED':'NO DATA';
+    return `<tr>
+      <td style="font-weight:500">${d.id}</td>
+      <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${COLORS[d.t]};margin-right:4px"></span>${d.t}</td>
+      <td>${d.sp}</td>
+      <td class="mono">${d.cnt}/8</td>
+      <td class="mono">${(d.gr*100).toFixed(1)}%</td>
+      <td class="mono">${d.len!=null?d.len:'—'}</td>
+      <td class="mono">${d.fw!=null?d.fw:'—'}</td>
+      <td class="mono">${d.dw!=null?d.dw:'—'}</td>
+      <td><span class="badge ${bc}">${sl}</span></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('raw-count').textContent = `Showing ${filtered.length} of ${rawData.length} pots`;
+}
+
+window.sortRaw = function(key) {
+  if(rawSort===key) rawDir*=-1; else { rawSort=key; rawDir=1; }
+  renderRaw();
+};
+</script>
+</body>
+</html>
+loadData();
