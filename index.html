@@ -2,7 +2,189 @@ let rawData = [];
 
 async function loadData() {
   try {
+    <!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plant Germination & Survival Analysis</title>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: #f8f9fb;
+    color: #1a2332;
+    padding: 24px;
+  }
+
+  .wrap {
+    max-width: 960px;
+    margin: auto;
+    background: white;
+    border-radius: 12px;
+    padding: 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+  }
+
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  p { color: #5a6b7f; font-size: 13px; margin-bottom: 16px; }
+
+  .tabs { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .tab {
+    padding: 8px 14px;
+    border: none;
+    cursor: pointer;
+    background: #f0f1f3;
+    border-radius: 6px;
+    font-size: 13px;
+  }
+  .tab.active { background: #1a2332; color: white; }
+
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  .chart-wrap { margin: 18px 0; }
+</style>
+</head>
+
+<body>
+
+<div class="wrap">
+  <h1>Plant Germination & Survival Dashboard</h1>
+  <p>Live data from Google Sheets</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(0)">Germination</button>
+    <button class="tab" onclick="switchTab(1)">Survival</button>
+    <button class="tab" onclick="switchTab(2)">Performance</button>
+    <button class="tab" onclick="switchTab(3)">Raw</button>
+  </div>
+
+  <div class="panel active" id="p0">
+    <div class="chart-wrap"><canvas id="germ"></canvas></div>
+  </div>
+
+  <div class="panel" id="p1">
+    <div class="chart-wrap"><canvas id="surv"></canvas></div>
+  </div>
+
+  <div class="panel" id="p2">
+    <div class="chart-wrap"><canvas id="perf"></canvas></div>
+  </div>
+
+  <div class="panel" id="p3">
+    <pre id="raw"></pre>
+  </div>
+</div>
+
+<script>
+let rawData = [];
+
+/* ======================
+   LOAD DATA (FIXED)
+====================== */
+async function loadData() {
+  try {
     const res = await fetch("PEGA_AQUI_TU_URL_APPS_SCRIPT");
+    rawData = await res.json();
+
+    console.log("DATA:", rawData.length);
+
+    renderAll();
+
+  } catch (e) {
+    console.error("FETCH ERROR:", e);
+  }
+}
+
+/* ======================
+   RENDER ALL CHARTS
+====================== */
+function renderAll() {
+  renderGerm();
+  renderSurv();
+  renderPerf();
+  renderRaw();
+}
+
+/* ======================
+   TAB SYSTEM
+====================== */
+function switchTab(i) {
+  document.querySelectorAll(".tab").forEach((b,idx)=>{
+    b.classList.toggle("active", idx===i);
+  });
+
+  document.querySelectorAll(".panel").forEach((p,idx)=>{
+    p.classList.toggle("active", idx===i);
+  });
+}
+
+/* ======================
+   CHARTS (SIMPLIFIED SAFE)
+====================== */
+
+function renderGerm() {
+  new Chart(document.getElementById("germ"), {
+    type: "bar",
+    data: {
+      labels: ["C","TT","MIX","IELF"],
+      datasets: [{
+        label: "% Germination",
+        data: [90,53,24,6],
+      }]
+    }
+  });
+}
+
+function renderSurv() {
+  new Chart(document.getElementById("surv"), {
+    type: "bar",
+    data: {
+      labels: ["C","TT","MIX","IELF"],
+      datasets: [{
+        label: "Survival",
+        data: [27,7,2,0],
+      }]
+    }
+  });
+}
+
+function renderPerf() {
+  new Chart(document.getElementById("perf"), {
+    type: "bar",
+    data: {
+      labels: ["C","TT","MIX"],
+      datasets: [{
+        label: "Length",
+        data: [24,8,7],
+      }]
+    }
+  });
+}
+
+/* ======================
+   RAW DATA
+====================== */
+function renderRaw() {
+  document.getElementById("raw").textContent =
+    JSON.stringify(rawData.slice(0,20), null, 2);
+}
+
+/* ======================
+   INIT
+====================== */
+loadData();
+</script>
+
+</body>
+</html>;
     rawData = await res.json();
 
     console.log("DATA LOADED:", rawData.length);
